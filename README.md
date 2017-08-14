@@ -2,3 +2,6 @@
 China Stock ML
 
 Running with Python3
+
+use SQLite
+
