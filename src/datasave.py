@@ -39,10 +39,11 @@ class DataSave(threading.Thread):
         print(FIVE_MIN_PATH)
 
     def run(self):
-        # self.save_5m()
-        self.create_5m_table()
+        # self.create_5m_table()
+        self.save_5m()
         while not self._stop.is_set():
             time.sleep(1)
+            self.stop()
 
     def stop(self):
         self._stop.set()
@@ -52,26 +53,65 @@ class DataSave(threading.Thread):
         print(len(five_min_files))
         for five_min_file in five_min_files:
             print(five_min_file)
-    
+            filePath = FIVE_MIN_PATH + "\\" + five_min_file
+            self.save_5m_file(filePath)
+
+    def save_5m_file(self, filePath):
+        stockCode = filePath[:len(filePath) - 4]
+        stockCode = stockCode.split("#")[1]
+        stockCodeInt = int(stockCode)
+        try:
+            jfile = open(filePath, "r")
+            lines = jfile.readlines()
+        except IOError as err:
+            print('read file: ' + str(err))
+        else:
+            conn = sqlite3.connect('stock.db')
+            c = conn.cursor()
+            for line in lines:
+                print(line.strip())
+                stockDate = '2017-01-01 09:45'
+                stockOpen = 1.00
+                stockHigh = 1.02
+                stockLow = 0.99
+                stockClose = 1.01
+                stockVol = 1112212.00
+                stockAmount = 1256895.00
+                sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount")'
+                sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount)
+                c.execute(sql1 + " " + sql2)
+                break
+            conn.commit()
+            conn.close()
+        finally:
+            if 'jfile' in locals():
+                jfile.close()
+
     def create_5m_table(self):
         conn = sqlite3.connect('stock.db')
         print("Opened database successfully")
         c = conn.cursor()
         # stockCode,stockDate,stockOpen,stockHigh,stockLow,stockClose,stockVol,stockAmount
-        c.execute('''CREATE TABLE COMPANY
-            (ID INT PRIMARY KEY     NOT NULL,
-            stockCode CHAR(20)      NOT NULL,
-            stockDate DATETIME      NOT NULL,
-            stockOpen REAL,
-            stockHigh REAL,
-            stockLow REAL,
-            stockClose REAL,
-            stockVol REAL,
-            stockAmount REAL
-            );''')
-        print("Table created successfully")
+        c.execute("PRAGMA foreign_keys = false;")
+        c.execute('''DROP TABLE IF EXISTS "daydata5m";''')
+        c.execute('''
+        CREATE TABLE "daydata5m" (
+        "ID" integer NOT NULL,
+        "stockCode" integer NOT NULL,
+        "stockDate" text NOT NULL,
+        "stockOpen" real,
+        "stockHigh" real,
+        "stockLow" real,
+        "stockClose" real,
+        "stockVol" real,
+        "stockAmount" real,
+        PRIMARY KEY ("ID")
+        );''')
+        c.execute("PRAGMA foreign_keys = true;")
         conn.commit()
+        print("Table created successfully")
         conn.close()
+
 
 if __name__ == '__main__':
     da = DataSave()
