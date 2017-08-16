@@ -8,12 +8,12 @@
 import os
 import time
 import threading
-import json
+# import json
 import sqlite3
-# import arrow
+import arrow
 # import datetime
 # import fileutil
-import struct
+# import struct
 # from pytz import utc
 # from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -35,8 +35,7 @@ class DataSave(threading.Thread):
         super(DataSave, self).__init__()
         self._stop = threading.Event()
         self._stop.clear()
-        print(DAILY_PATH)
-        print(FIVE_MIN_PATH)
+        self.count = 0
 
     def run(self):
         # self.create_5m_table()
@@ -50,9 +49,10 @@ class DataSave(threading.Thread):
 
     def save_5m(self):
         five_min_files = os.listdir(FIVE_MIN_PATH)
-        print(len(five_min_files))
+        total_count = len(five_min_files)
         for five_min_file in five_min_files:
-            print(five_min_file)
+            self.count += 1
+            print("%d/%d %s" % (self.count, total_count, five_min_file))
             filePath = FIVE_MIN_PATH + "\\" + five_min_file
             self.save_5m_file(filePath)
 
@@ -69,18 +69,22 @@ class DataSave(threading.Thread):
             conn = sqlite3.connect('stock.db')
             c = conn.cursor()
             for line in lines:
-                print(line.strip())
-                stockDate = '2017-01-01 09:45'
-                stockOpen = 1.00
-                stockHigh = 1.02
-                stockLow = 0.99
-                stockClose = 1.01
-                stockVol = 1112212.00
-                stockAmount = 1256895.00
+                t1 = line.strip().split(",")
+                if len(t1) < 7:
+                    continue
+                t1[0] = t1[0].replace('/', '-')
+                t1[1] = t1[1][:2] + ":" + t1[1][2:]
+                stockDate = t1[0] + "T" + t1[1] + "+0800"
+                stockOpen = float(t1[2])
+                stockHigh = float(t1[3])
+                stockLow = float(t1[4])
+                stockClose = float(t1[5])
+                stockVol = float(t1[6])
+                stockAmount = float(t1[7])
                 sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount")'
                 sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount)
                 c.execute(sql1 + " " + sql2)
-                break
+                # break
             conn.commit()
             conn.close()
         finally:
@@ -117,3 +121,16 @@ if __name__ == '__main__':
     da = DataSave()
     da.start()
     da.join()
+
+# import sqlite3
+# conn = sqlite3.connect('test.db')
+# c = conn.cursor()
+# print "Opened database successfully";
+# cursor = c.execute("SELECT id, name, address, salary  from COMPANY")
+# for row in cursor:
+#    print "ID = ", row[0]
+#    print "NAME = ", row[1]
+#    print "ADDRESS = ", row[2]
+#    print "SALARY = ", row[3], "\n"
+# print "Operation done successfully";
+# conn.close()

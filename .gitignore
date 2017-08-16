@@ -1,6 +1,11 @@
 # Sqlite DB file
 *.db
 
+# Zip files
+*.7z
+*.zip
+*.rar
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
