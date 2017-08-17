@@ -74,7 +74,9 @@ class DataSave(threading.Thread):
                     continue
                 t1[0] = t1[0].replace('/', '-')
                 t1[1] = t1[1][:2] + ":" + t1[1][2:]
-                stockDate = t1[0] + "T" + t1[1] + "+0800"
+                t2 = t1[0] + "T" + t1[1] + "+0800"
+                ts = arrow.get(t2)
+                stockDate = ts.timestamp
                 stockOpen = float(t1[2])
                 stockHigh = float(t1[3])
                 stockLow = float(t1[4])
@@ -102,7 +104,7 @@ class DataSave(threading.Thread):
         CREATE TABLE "daydata5m" (
         "ID" integer NOT NULL,
         "stockCode" integer NOT NULL,
-        "stockDate" text NOT NULL,
+        "stockDate" integer NOT NULL,
         "stockOpen" real,
         "stockHigh" real,
         "stockLow" real,
@@ -111,6 +113,14 @@ class DataSave(threading.Thread):
         "stockAmount" real,
         PRIMARY KEY ("ID")
         );''')
+        c.execute('''
+        CREATE INDEX "_stockCode"
+        ON "daydata5m" ("stockCode" ASC);
+        ''')
+        c.execute('''
+        CREATE INDEX "_stockDate"
+        ON "daydata5m" ("stockDate" ASC);
+        ''')
         c.execute("PRAGMA foreign_keys = true;")
         conn.commit()
         print("Table created successfully")
