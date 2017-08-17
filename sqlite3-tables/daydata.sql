@@ -18,8 +18,8 @@ PRAGMA foreign_keys = false;
 -- ----------------------------
 -- Table structure for daydata5m
 -- ----------------------------
-DROP TABLE IF EXISTS "daydata5m";
-CREATE TABLE "daydata5m" (
+DROP TABLE IF EXISTS "daydata";
+CREATE TABLE "daydata" (
   "ID" integer NOT NULL,
   "stockCode" integer NOT NULL,
   "stockDate" integer NOT NULL,
@@ -37,11 +37,11 @@ CREATE TABLE "daydata5m" (
 -- Indexes structure for table daydata5m
 -- ----------------------------
 CREATE INDEX "_stockCode"
-ON "daydata5m" (
+ON "daydata" (
   "stockCode" ASC
 );
 CREATE INDEX "_stockDate"
-ON "daydata5m" (
+ON "daydata" (
   "stockDate" ASC
 );
 

@@ -39,7 +39,7 @@ class DataSave(threading.Thread):
 
     def run(self):
         # self.create_5m_table()
-        self.save_5m()
+        self.save5m()
         while not self._stop.is_set():
             time.sleep(1)
             self.stop()
@@ -47,17 +47,23 @@ class DataSave(threading.Thread):
     def stop(self):
         self._stop.set()
 
-    def save_5m(self):
+    def save5m(self):
+        self.conn = sqlite3.connect('stock.db')
+        self.c = self.conn.cursor()
         five_min_files = os.listdir(FIVE_MIN_PATH)
         total_count = len(five_min_files)
         for five_min_file in five_min_files:
             self.count += 1
             print("%d/%d %s" % (self.count, total_count, five_min_file))
             filePath = FIVE_MIN_PATH + "\\" + five_min_file
-            self.save_5m_file(filePath)
+            self.save5m_file(filePath)
+        self.conn.close()
 
-    def save_5m_file(self, filePath):
+    def save5m_file(self, filePath):
         stockCode = filePath[:len(filePath) - 4]
+        # 上证指数改为660000
+        if stockCode = "SH#000001":
+            stockCode = "SH#660000"
         stockCode = stockCode.split("#")[1]
         stockCodeInt = int(stockCode)
         try:
@@ -66,8 +72,8 @@ class DataSave(threading.Thread):
         except IOError as err:
             print('read file: ' + str(err))
         else:
-            conn = sqlite3.connect('stock.db')
-            c = conn.cursor()
+            # conn = sqlite3.connect('stock.db')
+            # c = conn.cursor()
             for line in lines:
                 t1 = line.strip().split(",")
                 if len(t1) < 7:
@@ -83,12 +89,13 @@ class DataSave(threading.Thread):
                 stockClose = float(t1[5])
                 stockVol = float(t1[6])
                 stockAmount = float(t1[7])
-                sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount")'
-                sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount)
-                c.execute(sql1 + " " + sql2)
+                stockAvg = (stockOpen + stockHigh + stockLow + stockClose) / 4.0
+                sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount", "stockAvg")'
+                sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount, stockAvg)
+                self.c.execute(sql1 + " " + sql2)            
                 # break
-            conn.commit()
-            conn.close()
+            self.conn.commit()
+            # conn.close()
         finally:
             if 'jfile' in locals():
                 jfile.close()
@@ -111,6 +118,7 @@ class DataSave(threading.Thread):
         "stockClose" real,
         "stockVol" real,
         "stockAmount" real,
+        "stockAvg" real,
         PRIMARY KEY ("ID")
         );''')
         c.execute('''
@@ -125,7 +133,6 @@ class DataSave(threading.Thread):
         conn.commit()
         print("Table created successfully")
         conn.close()
-
 
 if __name__ == '__main__':
     da = DataSave()
