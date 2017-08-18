@@ -36,10 +36,13 @@ class DataSave(threading.Thread):
         self._stop = threading.Event()
         self._stop.clear()
         self.count = 0
+        self.conn = None
+        self.c = None
 
     def run(self):
         # self.create_5m_table()
-        self.save5m()
+        self.savedata('day')
+        # self.savedata('5m')
         while not self._stop.is_set():
             time.sleep(1)
             self.stop()
@@ -47,22 +50,28 @@ class DataSave(threading.Thread):
     def stop(self):
         self._stop.set()
 
-    def save5m(self):
+    def savedata(self, stype):
         self.conn = sqlite3.connect('stock.db')
         self.c = self.conn.cursor()
-        five_min_files = os.listdir(FIVE_MIN_PATH)
+        if stype == '5m':
+            five_min_files = os.listdir(FIVE_MIN_PATH)
+        elif stype == 'day':
+            five_min_files = os.listdir(DAILY_PATH)
         total_count = len(five_min_files)
         for five_min_file in five_min_files:
             self.count += 1
             print("%d/%d %s" % (self.count, total_count, five_min_file))
-            filePath = FIVE_MIN_PATH + "\\" + five_min_file
-            self.save5m_file(filePath)
+            if stype == '5m':
+                filePath = FIVE_MIN_PATH + "\\" + five_min_file
+                self.savedata_file(filePath, '5m')
+            elif stype == 'day':
+                filePath = DAILY_PATH + "\\" + five_min_file
+                self.savedata_file(filePath, 'day')
         self.conn.close()
 
-    def save5m_file(self, filePath):
+    def savedata_file(self, filePath, stype):
         stockCode = filePath[:len(filePath) - 4]
-        # 上证指数改为660000
-        if stockCode = "SH#000001":
+        if stockCode == "SH#000001":
             stockCode = "SH#660000"
         stockCode = stockCode.split("#")[1]
         stockCodeInt = int(stockCode)
@@ -76,23 +85,45 @@ class DataSave(threading.Thread):
             # c = conn.cursor()
             for line in lines:
                 t1 = line.strip().split(",")
-                if len(t1) < 7:
-                    continue
-                t1[0] = t1[0].replace('/', '-')
-                t1[1] = t1[1][:2] + ":" + t1[1][2:]
-                t2 = t1[0] + "T" + t1[1] + "+0800"
-                ts = arrow.get(t2)
-                stockDate = ts.timestamp
-                stockOpen = float(t1[2])
-                stockHigh = float(t1[3])
-                stockLow = float(t1[4])
-                stockClose = float(t1[5])
-                stockVol = float(t1[6])
-                stockAmount = float(t1[7])
-                stockAvg = (stockOpen + stockHigh + stockLow + stockClose) / 4.0
-                sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount", "stockAvg")'
-                sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount, stockAvg)
-                self.c.execute(sql1 + " " + sql2)            
+                # print(t1)
+                if stype == '5m':
+                    if len(t1) < 7:
+                        continue
+                    t1[0] = t1[0].replace('/', '-')
+                    t1[1] = t1[1][:2] + ":" + t1[1][2:]
+                    t2 = t1[0] + "T" + t1[1] + "+0800"
+                    # print(t2)
+                    ts = arrow.get(t2)
+                    stockDate = ts.timestamp
+                    stockOpen = float(t1[2])
+                    stockHigh = float(t1[3])
+                    stockLow = float(t1[4])
+                    stockClose = float(t1[5])
+                    stockVol = float(t1[6])
+                    stockAmount = float(t1[7])
+                elif stype == 'day':
+                    if len(t1) < 6:
+                        continue
+                    t1[0] = t1[0].replace('/', '-')
+                    t2 = t1[0] + "T" + "00:00:00+0800"
+                    # print(t2)
+                    ts = arrow.get(t2)
+                    stockDate = ts.timestamp
+                    stockOpen = float(t1[1])
+                    stockHigh = float(t1[2])
+                    stockLow = float(t1[3])
+                    stockClose = float(t1[4])
+                    stockVol = float(t1[5])
+                    stockAmount = float(t1[6])
+                stockAvg = (stockOpen + stockHigh +
+                            stockLow + stockClose) / 4.0
+                if stype == '5m':
+                    sql1 = 'INSERT INTO "main"."daydata5m" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount", "stockAvg")'
+                elif stype == 'day':
+                    sql1 = 'INSERT INTO "main"."daydata" ("stockCode", "stockDate", "stockOpen", "stockHigh", "stockLow", "stockClose", "stockVol", "stockAmount", "stockAvg")'
+                sql2 = "VALUES ('%d', '%s', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f');" % (
+                    stockCodeInt, stockDate, stockOpen, stockHigh, stockLow, stockClose, stockVol, stockAmount, stockAvg)
+                self.c.execute(sql1 + " " + sql2)
                 # break
             self.conn.commit()
             # conn.close()
@@ -133,6 +164,7 @@ class DataSave(threading.Thread):
         conn.commit()
         print("Table created successfully")
         conn.close()
+
 
 if __name__ == '__main__':
     da = DataSave()
