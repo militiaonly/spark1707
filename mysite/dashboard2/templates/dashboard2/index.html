@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <!-- <meta http-equiv="refresh" content="60"> -->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link rel="icon" href="{% static 'dashboard2/img/favicon.ico' %}">
+
+  <title>NewTop Cup Machine Dashboard</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="{% static 'dashboard2/css/bootstrap.min.css' %}" rel="stylesheet">
+  <!-- AdminLTE template CSS -->
+  <link href="{% static 'dashboard2/css/AdminLTE.css' %}" rel="stylesheet">
+  <!-- Custom styles for this template -->
+  <link href="{% static 'dashboard2/css/dashboard.css' %}" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
+  <!-- Ionicons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+
+  <!-- Bootstrap core JavaScript
+    ================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+  <script src="{% static 'dashboard2/js/jquery.min.js' %}"></script>
+  <script src="{% static 'dashboard2/js/bootstrap.min.js' %}"></script>
+  <!-- <script src="{% static 'dashboard2/js/echarts.min.js' %}"></script> -->
+</head>
+
+<body>
+      <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="https://github.com/militiaonly/spark1707">Spark1707</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="/admin">admin</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- <h1 class="page-header">看板</h1> -->
+      <!-- <div class="row placeholders"> -->
+        {% if stock_list %}
+        <ul style="list-style-type:circle; font-size: 18px;">
+          {% for stock in stock_list %}
+          <li><a href="{% url 'dashboard2:detail' stock.code %}">{{ stock.code}} | {{stock.name }}</a></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p>No stocks are available.</p>
+        {% endif %}
+      <!-- </div> -->
+                <!-- <h2 class="sub-header">Section title</h2>
+          <div id="gauge" style="width: 1000px;height:600px;"></div> -->
+    </div>
+  </div>
+</body>
+
+</html>
