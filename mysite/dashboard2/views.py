@@ -1,10 +1,10 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 import sqlite3
-# import requests
 import json
+import arrow
 # import hashlib
-# import arrow
+# import requests
 # import random
 # HttpResponseRedirect
 # from django.urls import reverse
@@ -22,6 +22,7 @@ def index(request):
     context = {'stock_list': stock_list}
     return render(request, template, context)
 
+
 def detail(request, stock_code):
     stock_json = read_json_file("stock_list.json")
     stocks = {}
@@ -30,22 +31,21 @@ def detail(request, stock_code):
             stocks[item['code']] = item['name']
     if stock_code in stocks.keys():
         stock_name = stocks[stock_code]
+        data_points = get_stock_daydata(stock_code)
+        json_data = {}
+        json_data['stock_name'] = stock_name
+        json_data['stock_code'] = stock_code
+        json_data['data_points'] = data_points
+        json_data_str = json.dumps(json_data, 'utf-8')
+        # print(json_data_str)
+        return render(request, 'dashboard2/detail.html', {'json_data_str': json_data_str})
     else:
-        stock_name = ""
-    return render(request, 'dashboard2/detail.html', {'stock_name': stock_name, "stock_code": stock_code})
+        raise Http404("Stock code does not exist")
+
 
 def stock_info_api(request):
-    machine_list = []
-    conn = sqlite3.connect('stock.db')
-    c = conn.cursor()
-    print("Opened database successfully")
-    cursor = c.execute("SELECT stockCode, stockDate from daydata LIMIT 10")
-    for row in cursor:
-        # print(row)
-        machine_list.append(row)
-    print("Operation done successfully")
-    conn.close()
-    return HttpResponse(json.dumps(machine_list))
+    raise Http404("Stock code does not exist")
+
 
 def read_json_file(path):
     #######################
@@ -75,6 +75,25 @@ def read_json_file(path):
         jsonObject = json.loads(json_string)
     except Exception as e:
         jsonObject = None
-        logger.error('read_json_file: ' + str(e))
+        print('read_json_file: ' + str(e))
 
     return jsonObject
+
+
+def get_stock_daydata(stock_code):
+    data_points = []
+    conn = sqlite3.connect('stock.db')
+    c = conn.cursor()
+    sql = "SELECT * FROM daydata WHERE stockCode=%d ORDER BY ID DESC LIMIT 0, 3000" % int(stock_code)
+    cursor = c.execute(sql)
+    for row in cursor:
+        # print(row)
+        data_point = {}
+        data_point['x'] = arrow.get(row[2]).format("YYYY-MM-DD")
+        # data_point['x'] = arrow.get(row[2]).datetime
+        # open / high / low / close
+        data_point['y'] = [row[3], row[4], row[5], row[6]]
+        data_points.append(data_point)
+    conn.close()
+    # print(data_points)
+    return data_points
