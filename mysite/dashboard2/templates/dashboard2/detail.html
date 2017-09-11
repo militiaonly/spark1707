@@ -1,101 +1,328 @@
 {% load static %}
 <html>
     <head>
-        <script type="text/javascript">
-        window.onload = function () {
-            jsonObject = JSON.parse('{{ json_data_str|safe }}');
-            // console.log(jsonObject);
-            data_points = jsonObject.data_points;
-            var i;
-            for (i=0; i<data_points.length; i++) {
-                // console.log(data_points[i].x)
-                data_points[i].x = new Date(data_points[i].x)
-                // console.log(data_points[i].x)
-            }
-            var chart = new CanvasJS.Chart("chartContainer", {
-            title: {
-                text: jsonObject.stock_code + " " + jsonObject.stock_name
-            },
-            zoomEnabled: true,
-            axisY: {
-                includeZero: false,
-                title: "Prices",
-                prefix: ""
-            },
-            axisX: {
-                interval: 2,
-                intervalType: "month",
-                valueFormatString: "YYYY-MM",
-            },
-            data: [
-            {
-                type: "candlestick",
-                risingColor: "#DD7E86", 
-                dataPoints: data_points
-                }
-                ]
-            });
-            chart.render();
-        }
-        </script>
-        <!-- <script type="text/javascript">
-            window.onload = function () {
-                var chart = new CanvasJS.Chart("chartContainer", {
-                    title: {
-                        text: "Basic Candle Stick Chart"
-                    },
-                    zoomEnabled: true,
-                    axisY: {
-                        includeZero: false,
-                        title: "Prices",
-                        prefix: "$ "
-                    },
-                    axisX: {
-                        interval: 2,
-                        intervalType: "month",
-                        valueFormatString: "MMM-YY",
-                    },
-                    data: [
-                    {
-                        type: "candlestick",
-                        dataPoints: [
-                            { x: new Date(2012, 01, 01), y: [5198, 5629, 5159, 5385] },
-                            { x: new Date(2012, 02, 01), y: [5366, 5499, 5135, 5295] },
-                            { x: new Date(2012, 03, 01), y: [5296, 5378, 5154, 5248] },
-                            { x: new Date(2012, 04, 01), y: [5254, 5279, 4788, 4924] },
-                            { x: new Date(2012, 05, 01), y: [4910, 5286, 4770, 5278] },
-                            { x: new Date(2012, 06, 01), y: [5283, 5348, 5032, 5229] },
-                            { x: new Date(2012, 07, 01), y: [5220, 5448, 5164, 5258] },
-                            { x: new Date(2012, 08, 01), y: [5276, 5735, 5215, 5703] },
-                            { x: new Date(2012, 09, 01), y: [5704, 5815, 4888, 5619] },
-                            { x: new Date(2012, 10, 01), y: [5609, 5885, 5548, 5879] },
-                            { x: new Date(2012, 11, 01), y: [5878, 5965, 5823, 5905] },
-                            { x: new Date(2013, 00, 01), y: [5937, 6111, 5935, 6034] },
-                            { x: new Date(2013, 01, 01), y: [6040, 6052, 5671, 5693] },
-                            { x: new Date(2013, 02, 01), y: [5702, 5971, 5604, 5682] },
-                            { x: new Date(2013, 03, 01), y: [5697, 5962, 5477, 5930] },
-                            { x: new Date(2013, 04, 01), y: [5911, 6229, 5910, 5985] },
-                            { x: new Date(2013, 05, 01), y: [5997, 6011, 5566, 5842] },
-                            { x: new Date(2013, 06, 01), y: [5834, 6093, 5675, 5742] },
-                            { x: new Date(2013, 07, 01), y: [5776, 5808, 5118, 5471] },
-                            { x: new Date(2013, 08, 01), y: [5480, 6142, 5318, 5735] },
-                            { x: new Date(2013, 09, 01), y: [5756, 6309, 5700, 6299] },
-                            { x: new Date(2013, 10, 01), y: [6289, 6342, 5972, 6176] },
-                            { x: new Date(2013, 11, 01), y: [6171, 6415, 6129, 6304] }
-                        ]
-                    }
-                    ]
-                });
-                chart.render();
-            }
-        </script> -->
-        <script src="{% static 'dashboard2/js/canvasjs.min.js' %}"></script>
+        <script src="{% static 'dashboard2/js/jquery.min.js' %}"></script>
+        <script src="{% static 'dashboard2/js/echarts.min.js' %}"></script>
         <title>Stock Detail</title>
     </head>
 <body>
 
-<div id="chartContainer" style="height: 400px; width: 100%;">
+<div id="chartContainer" style="height: 600px; width: 100%;">
 </div>
+
+<script type="text/javascript">
+var upColor = '#00da3c';
+var downColor = '#ec0000';
+
+function splitData(rawData) {
+    var categoryData = [];
+    var values = [];
+    var volumes = [];
+    for (var i = 0; i < rawData.length; i++) {
+        categoryData.push(rawData[i].splice(0, 1)[0]);
+        values.push(rawData[i]);
+        volumes.push([i, rawData[i][4], rawData[i][0] > rawData[i][1] ? 1 : -1]);
+    }
+
+    return {
+        categoryData: categoryData,
+        values: values,
+        volumes: volumes
+    };
+}
+
+function calculateMA(dayCount, data) {
+    var result = [];
+    for (var i = 0, len = data.values.length; i < len; i++) {
+        if (i < dayCount) {
+            result.push('-');
+            continue;
+        }
+        var sum = 0;
+        for (var j = 0; j < dayCount; j++) {
+            sum += data.values[i - j][1];
+        }
+        result.push(+(sum / dayCount).toFixed(3));
+    }
+    return result;
+}
+
+window.onload = function () {
+    var myChart = echarts.init(document.getElementById('chartContainer'));
+    var jsonObject = JSON.parse('{{ json_data_str|safe }}');
+    var rawData = jsonObject.data_points;
+    var stockName = jsonObject.stock_code + " " + jsonObject.stock_name;
+    console.log(stockName)
+    // console.log(rawData)
+    var data = splitData(rawData);
+    myChart.setOption(option = {
+        backgroundColor: '#fff',
+        animation: false,
+        legend: {
+            bottom: 10,
+            left: 'center',
+            data: [stockName, 'MA5', 'MA10', 'MA20', 'MA30']
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross'
+            },
+            backgroundColor: 'rgba(245, 245, 245, 0.8)',
+            borderWidth: 1,
+            borderColor: '#ccc',
+            padding: 10,
+            textStyle: {
+                color: '#000'
+            },
+            position: function (pos, params, el, elRect, size) {
+                console.log("pos")
+                console.log(pos)
+                console.log("size")
+                console.log(size)
+                var obj = {top: 10};
+                // obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+                obj['left'] = 30
+                obj['right'] = 30
+                return obj;
+            },
+            extraCssText: 'width: 170px'
+        },
+        axisPointer: {
+            link: {xAxisIndex: 'all'},
+            label: {
+                backgroundColor: '#777'
+            }
+        },
+        toolbox: {
+            feature: {
+                dataZoom: {
+                    yAxisIndex: false
+                },
+                brush: {
+                    type: ['lineX', 'clear']
+                }
+            }
+        },
+        brush: {
+            xAxisIndex: 'all',
+            brushLink: 'all',
+            outOfBrush: {
+                colorAlpha: 0.1
+            }
+        },
+        visualMap: {
+            show: false,
+            seriesIndex: 5,
+            dimension: 2,
+            pieces: [{
+                value: 1,
+                color: downColor
+            }, {
+                value: -1,
+                color: upColor
+            }]
+        },
+        grid: [
+            {
+                left: '10%',
+                right: '8%',
+                height: '50%'
+            },
+            {
+                left: '10%',
+                right: '8%',
+                top: '63%',
+                height: '16%'
+            }
+        ],
+        xAxis: [
+            {
+                type: 'category',
+                data: data.categoryData,
+                scale: true,
+                boundaryGap : false,
+                axisLine: {onZero: false},
+                splitLine: {show: false},
+                splitNumber: 20,
+                min: 'dataMin',
+                max: 'dataMax',
+                axisPointer: {
+                    z: 100
+                }
+            },
+            {
+                type: 'category',
+                gridIndex: 1,
+                data: data.categoryData,
+                scale: true,
+                boundaryGap : false,
+                axisLine: {onZero: false},
+                axisTick: {show: false},
+                splitLine: {show: false},
+                axisLabel: {show: false},
+                splitNumber: 20,
+                min: 'dataMin',
+                max: 'dataMax',
+                axisPointer: {
+                    label: {
+                        formatter: function (params) {
+                            var seriesValue = (params.seriesData[0] || {}).value;
+                            return params.value
+                            + (seriesValue != null
+                                ? '\n' + echarts.format.addCommas(seriesValue)
+                                : ''
+                            );
+                        }
+                    }
+                }
+            }
+        ],
+        yAxis: [
+            {
+                scale: true,
+                splitArea: {
+                    show: true
+                }
+            },
+            {
+                scale: true,
+                gridIndex: 1,
+                splitNumber: 2,
+                axisLabel: {show: false},
+                axisLine: {show: false},
+                axisTick: {show: false},
+                splitLine: {show: false}
+            }
+        ],
+        dataZoom: [
+            {
+                type: 'inside',
+                xAxisIndex: [0, 1],
+                start: 98,
+                end: 100
+            },
+            {
+                show: true,
+                xAxisIndex: [0, 1],
+                type: 'slider',
+                top: '85%',
+                start: 98,
+                end: 100
+            }
+        ],
+        series: [
+            {
+                name: stockName,
+                type: 'candlestick',
+                data: data.values,
+                itemStyle: {
+                    normal: {
+                        color: upColor,
+                        color0: downColor,
+                        borderColor: null,
+                        borderColor0: null
+                    }
+                },
+                tooltip: {
+                    formatter: function (param) {
+                        // console.log(param)
+                        // param = param[0];
+                        return [
+                            'Date: ' + param.name + '<hr size=1 style="margin: 3px 0">',
+                            'Open: ' + param.data[0] + '<br/>',
+                            'Close: ' + param.data[1] + '<br/>',
+                            'Lowest: ' + param.data[2] + '<br/>',
+                            'Highest: ' + param.data[3] + '<br/>'
+                        ].join('');
+                    }
+                }
+            },
+            {
+                name: 'MA5',
+                type: 'line',
+                data: calculateMA(5, data),
+                smooth: true,
+                lineStyle: {
+                    normal: {opacity: 0.5}
+                }
+            },
+            {
+                name: 'MA10',
+                type: 'line',
+                data: calculateMA(10, data),
+                smooth: true,
+                lineStyle: {
+                    normal: {opacity: 0.5}
+                }
+            },
+            {
+                name: 'MA20',
+                type: 'line',
+                data: calculateMA(20, data),
+                smooth: true,
+                lineStyle: {
+                    normal: {opacity: 0.5}
+                }
+            },
+            {
+                name: 'MA30',
+                type: 'line',
+                data: calculateMA(30, data),
+                smooth: true,
+                lineStyle: {
+                    normal: {opacity: 0.5}
+                }
+            },
+            {
+                name: 'Volume',
+                type: 'bar',
+                xAxisIndex: 1,
+                yAxisIndex: 1,
+                data: data.volumes
+            }
+        ]
+    }, true);
+    // myChart.on('brushSelected', renderBrushed);
+
+    // function renderBrushed(params) {
+    //     var sum = 0;
+    //     var min = Infinity;
+    //     var max = -Infinity;
+    //     var countBySeries = [];
+    //     var brushComponent = params.brushComponents[0];
+
+    //     var rawIndices = brushComponent.series[0].rawIndices;
+    //     for (var i = 0; i < rawIndices.length; i++) {
+    //         var val = data.values[rawIndices[i]][1];
+    //         sum += val;
+    //         min = Math.min(val, min);
+    //         max = Math.max(val, max);
+    //     }
+
+    //     panel.innerHTML = [
+    //         '<h3>STATISTICS:</h3>',
+    //         'SUM of open: ' + (sum / rawIndices.length).toFixed(4) + '<br>',
+    //         'MIN of open: ' + min.toFixed(4) + '<br>',
+    //         'MAX of open: ' + max.toFixed(4) + '<br>'
+    //     ].join(' ');
+    // }
+
+    myChart.dispatchAction({
+        type: 'brush',
+        areas: [
+            {
+                brushType: 'lineX',
+                coordRange: ['2016-06-02', '2016-06-20'],
+                xAxisIndex: 0
+            }
+        ]
+    })
+};
+</script>
+
+
+
 
 </body>
 </form>

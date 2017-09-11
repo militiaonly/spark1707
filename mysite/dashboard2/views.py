@@ -43,7 +43,7 @@ def detail(request, stock_code):
         raise Http404("Stock code does not exist")
 
 
-def stock_info_api(request):
+def stock_info_api(request, stock_code):
     raise Http404("Stock code does not exist")
 
 
@@ -80,7 +80,7 @@ def read_json_file(path):
     return jsonObject
 
 
-def get_stock_daydata(stock_code):
+def get_stock_daydata_old(stock_code):
     data_points = []
     conn = sqlite3.connect('stock.db')
     c = conn.cursor()
@@ -93,6 +93,24 @@ def get_stock_daydata(stock_code):
         # data_point['x'] = arrow.get(row[2]).datetime
         # open / high / low / close
         data_point['y'] = [row[3], row[4], row[5], row[6]]
+        data_points.append(data_point)
+    conn.close()
+    # print(data_points)
+    return data_points
+
+
+def get_stock_daydata(stock_code):
+    # ["2016-06-22", 832.67, 780.83, 770.36, 920.16, 89440000]
+    data_points = []
+    conn = sqlite3.connect('stock.db')
+    c = conn.cursor()
+    sql = "SELECT * FROM daydata WHERE stockCode=%d ORDER BY ID ASC LIMIT 0, 3000" % int(stock_code)
+    cursor = c.execute(sql)
+    for row in cursor:
+        # print(row)
+        # open / high / low / close / volume
+        # 3 / 4 / 5 / 6 / 7
+        data_point = [arrow.get(row[2]).format("YYYY-MM-DD"), row[3], row[6], row[5], row[4], row[7]]
         data_points.append(data_point)
     conn.close()
     # print(data_points)
